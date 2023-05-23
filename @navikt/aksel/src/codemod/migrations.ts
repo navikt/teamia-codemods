@@ -3,6 +3,50 @@ import chalk from "chalk";
 export const migrations: {
   [key: string]: { description: string; value: string; path: string }[];
 } = {
+  "nav-frontend": [
+    {
+      description:
+        "nav-frontend-alertstriper to @navikt/ds-react migration, will probably break stuff",
+      value: "nav-frontend-alertstriper",
+      path: "nav-frontend/alertStripe/alertStripe",
+    },
+    {
+      description:
+        "nav-frontend-knapper to @navikt/ds-react migration, will probably break stuff",
+      value: "nav-frontend-knapper",
+      path: "nav-frontend/knapper/knapper",
+    },
+    {
+      description:
+        "nav-frontend-lenker to @navikt/ds-react migration, will probably break stuff",
+      value: "nav-frontend-lenker",
+      path: "nav-frontend/lenker/lenker",
+    },
+    {
+      description:
+        "nav-frontend-lenkepanel to @navikt/ds-react migration, will probably break stuff",
+      value: "nav-frontend-lenkepanel",
+      path: "nav-frontend/lenkepanel/lenkepanel",
+    },
+    {
+      description:
+        "nav-frontend-paneler to @navikt/ds-react migration, will probably break stuff",
+      value: "nav-frontend-paneler",
+      path: "nav-frontend/paneler/paneler",
+    },
+    {
+      description:
+        "nav-frontend-popover to @navikt/ds-react migration, will probably break stuff",
+      value: "nav-frontend-popover",
+      path: "nav-frontend/popover/popover",
+    },
+    {
+      description:
+        "nav-frontend-skjema to @navikt/ds-react migration, will probably break stuff",
+      value: "nav-frontend-skjema",
+      path: "nav-frontend/skjema/skjema",
+    },
+  ],
   "1.0.0": [
     {
       description: "Runs all codemods for beta -> v1 migration",
