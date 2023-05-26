@@ -3,14 +3,11 @@ import {
   setJsxBaseName,
   setJsxNames,
 } from "../../../utils/jsxName";
-import {
-  parseAttribute,
-  ParsedAttribute,
-  wrapAttributeValue,
-} from "../../../utils/jsxAttributes";
+import { parseAttribute, ParsedAttribute } from "../../../utils/jsxAttributes";
 import { findImport, getImportNames } from "../../../utils/imports";
-import { createChild, createComments } from "../../../utils/jsxChildren";
+import { createChild, createComments } from "../../../utils/jsxElements";
 import { ImmutableMap, notUndefined } from "../../../utils/otherUtils";
+import { wrapValue } from "../../../utils/expression";
 
 function getNewPlacement(placement: unknown) {
   if (typeof placement !== "string") return "top";
@@ -190,14 +187,14 @@ export default function transformer(file, api) {
               return notUndefined(getNewNameContent(parsed.name))
                 ? j.jsxAttribute(
                     j.jsxIdentifier(getNewNameContent(parsed.name)),
-                    wrapAttributeValue(getNewValue(parsed))
+                    wrapValue(getNewValue(parsed))
                   )
                 : undefined;
             }
             return notUndefined(getNewName(parsed.name))
               ? j.jsxAttribute(
                   j.jsxIdentifier(getNewName(parsed.name)),
-                  wrapAttributeValue(getNewValue(parsed))
+                  wrapValue(getNewValue(parsed))
                 )
               : undefined;
           }

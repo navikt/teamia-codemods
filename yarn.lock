@@ -3952,11 +3952,10 @@ __metadata:
     jscodeshift: 0.13.1
     jscodeshift-add-imports: 1.0.10
     lodash: 4.17.21
-    react-is: ^18.2.0
     react-scanner: ^1.1.0
     rimraf: 3.0.2
     ts-jest: ^29.0.0
-    typescript: ^4.8.0
+    typescript: ^5.0.4
   bin:
     aksel: ./dist/index.js
   languageName: unknown

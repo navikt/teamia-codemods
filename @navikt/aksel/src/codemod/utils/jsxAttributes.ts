@@ -2,51 +2,158 @@ import * as Kinds from "ast-types/gen/kinds";
 import core, { ASTPath, JSXAttribute, JSXSpreadAttribute } from "jscodeshift";
 import { namedTypes } from "ast-types";
 import {
-  isAstNodeKind,
   isLiteralKind,
   isNakedLiteral,
   NakedLiteral,
-  literalKind,
+  literalKinds,
   jsxExpressionContainerKind,
   jsxElementKind,
   jsxFragmentKind,
-  isObject,
+  isJsxExpressionContainerExpressionKind,
+  isJsxExpressionContainerKind,
+  isJsxEmptyExpressionKind,
+  isIdentifierKind,
+  jsxAttributeKinds,
+  jsxSpreadAttributeKinds,
+  isExpressionKind,
+  jsxIdentifierKinds,
+  jsxNamespacedNameKinds,
 } from "./typeKinds";
-import { wrapValueInExpressionContainer } from "./expression";
+import { wrapValue } from "./expression";
+import { isInList } from "./otherUtils";
 
-type ValidAttributeValue =
+import { isJsxElement, isJsxFragment } from "./jsxElements";
+
+export type ValidAttributeValue =
   | Kinds.LiteralKind
   | Kinds.JSXExpressionContainerKind
   | Kinds.JSXElementKind
   | Kinds.JSXFragmentKind;
 
+export type JSXIdentifierAttribute = Omit<JSXAttribute, "name"> & {
+  name: Kinds.JSXIdentifierKind;
+};
+export type JSXNamespacedAttribute = Omit<JSXAttribute, "name"> & {
+  name: Kinds.JSXNamespacedNameKind;
+};
+
 export function isValidAttributeValue(
   value: unknown
 ): value is ValidAttributeValue {
-  if (isObject(value) && "type" in value && typeof value.type === "string") {
-    return (
-      [
-        ...literalKind,
-        ...jsxExpressionContainerKind,
-        ...jsxElementKind,
-        ...jsxFragmentKind,
-      ] as readonly string[]
-    ).includes(value.type);
-  }
-  return false;
-}
-export function getAttributeName(attribute: JSXAttribute | JSXSpreadAttribute) {
-  if (attribute === undefined || !("type" in attribute)) return "";
-  if (attribute.type === "JSXSpreadAttribute") return "";
-  if (attribute?.name !== undefined && attribute?.name?.type !== undefined) {
-    if (attribute.name.type === "JSXIdentifier")
-      return attribute?.name?.name || "";
-    return attribute?.name?.name?.name;
-  }
-  return "";
+  return isInList(value, [
+    ...literalKinds,
+    ...jsxExpressionContainerKind,
+    ...jsxElementKind,
+    ...jsxFragmentKind,
+  ]);
 }
 
-export function getRawAttributeValue(
+export function isJsxAttribute(
+  value: unknown
+): value is Kinds.JSXAttributeKind {
+  return isInList(value, jsxAttributeKinds);
+}
+
+export function isJsxIdentifierAttribute(
+  value: unknown
+): value is JSXIdentifierAttribute {
+  if (!isJsxAttribute(value)) {
+    return false;
+  }
+  return isInList(value.name, jsxIdentifierKinds);
+}
+
+export function isJsxNamespacedAttribute(
+  value: unknown
+): value is JSXNamespacedAttribute {
+  if (!isJsxAttribute(value)) {
+    return false;
+  }
+  return isInList(value.name, jsxNamespacedNameKinds);
+}
+
+export function isJsxSpreadAttribute(
+  value: unknown
+): value is Kinds.JSXSpreadAttributeKind {
+  return isInList(value, jsxSpreadAttributeKinds);
+}
+
+export function isAttribute(
+  value: unknown
+): value is Kinds.JSXAttributeKind | Kinds.JSXSpreadAttributeKind {
+  return isJsxAttribute(value) || isJsxSpreadAttribute(value);
+}
+
+function compareAttributeName(a: AttributeName, b: AttributeName): boolean {
+  return a.name === b.name && a.namespace === b.namespace;
+}
+
+export function attributeIsNamed(
+  attribute: unknown,
+  name: string,
+  namespace?: string
+) {
+  if (!isAttribute(attribute)) {
+    return false;
+  }
+  return compareAttributeName(getAttributeName(attribute), {
+    name: name,
+    namespace: namespace,
+  });
+}
+
+export function hasAttribute(
+  array: unknown[],
+  name: string,
+  namespace?: string
+) {
+  return array.some((item) => {
+    if (!isAttribute(item)) {
+      return false;
+    }
+    return compareAttributeName(getAttributeName(item), {
+      name: name,
+      namespace: namespace,
+    });
+  });
+}
+
+type AttributeName = {
+  namespace?: string;
+  name?: string;
+};
+export function getAttributeName(value: unknown): AttributeName {
+  if (!isAttribute(value)) {
+    return {
+      name: undefined,
+      namespace: undefined,
+    };
+  }
+  if (isJsxAttribute(value)) {
+    if (isIdentifierKind(value.name)) {
+      return {
+        name: value.name.name,
+        namespace: undefined,
+      };
+    }
+    return {
+      name: value.name.name.name,
+      namespace: value.name.namespace.name,
+    };
+  }
+  if (isIdentifierKind(value.argument)) {
+    return {
+      name: value.argument.name,
+      namespace: undefined,
+    };
+  }
+  return {
+    name: undefined,
+    namespace: undefined,
+  };
+}
+
+/*export function getRawAttributeValue(
   attribute: JSXAttribute | JSXSpreadAttribute
 ) {
   if (attribute === undefined || attribute.type === undefined) return "";
@@ -59,13 +166,80 @@ export function getRawAttributeValue(
   if (attribute?.value?.type === "JSXExpressionContainer") {
     if (isLiteralKind(attribute?.value?.expression)) {
       if (attribute?.value?.expression?.value === undefined) return "";
-      console.log("here?");
       return attribute?.value?.expression?.value || "";
     }
     return attribute?.value || "";
   }
   return undefined;
 }
+
+ */
+export function getRawAttributeValue(
+  attribute: JSXAttribute | JSXSpreadAttribute
+) {
+  if (attribute.type === "JSXAttribute") {
+    return getRawValue(attribute.value);
+  }
+  return getRawValue(attribute.argument);
+}
+
+export function getRawValue(value: unknown) {
+  if (isNakedLiteral(value)) {
+    return value;
+  }
+  if (isValidAttributeValue(value)) {
+    const attributeValue = extractAttributeValue(value);
+    return isNakedLiteral(attributeValue) ? attributeValue : undefined;
+  }
+  if (isJsxEmptyExpressionKind(value)) {
+    const attributeValue = extractAttributeValue(value);
+    return isNakedLiteral(attributeValue) ? attributeValue : undefined;
+  }
+  if (isExpressionKind(value)) {
+    const attributeValue = extractAttributeValue(value);
+    return isNakedLiteral(attributeValue) ? attributeValue : undefined;
+  }
+  return undefined;
+}
+
+export function getAttributeValue(
+  attribute: JSXAttribute | JSXSpreadAttribute
+) {
+  if (attribute.type === "JSXAttribute") {
+    return extractAttributeValue(attribute.value);
+  }
+  return extractAttributeValue(attribute.argument);
+}
+export function extractAttributeValue(
+  value:
+    | ValidAttributeValue
+    | Kinds.ExpressionKind
+    | Kinds.JSXEmptyExpressionKind
+):
+  | undefined
+  | NakedLiteral
+  | Exclude<
+      ValidAttributeValue | Kinds.ExpressionKind,
+      Kinds.JSXExpressionContainerKind
+    > {
+  if (isJsxEmptyExpressionKind(value)) {
+    return undefined;
+  }
+  if (isLiteralKind(value)) {
+    return value.value as NakedLiteral;
+  }
+  if (isJsxElement(value)) {
+    return value;
+  }
+  if (isJsxFragment(value)) {
+    return value;
+  }
+  if (isJsxExpressionContainerKind(value)) {
+    return extractAttributeValue(value.expression);
+  }
+  return value;
+}
+
 const filterAttributeByNames =
   (...names: string[]) =>
   (jsxAttribute: ASTPath<namedTypes.JSXAttribute>) => {
@@ -76,20 +250,18 @@ const filterAttributeByNames =
   };
 
 export function wrapAttributeValue(value: unknown) {
-  if (value === undefined) return null;
-
-  if (typeof value === "string") {
-    return core.stringLiteral(value);
+  if (isNakedLiteral(value)) {
+    return parseLiteral(value);
   }
 
-  if (
-    isAstNodeKind(value) &&
-    ["JSXElement", "JSXFragment", "JSXExpressionContainer"].includes(value.type)
-  ) {
+  if (isValidAttributeValue(value)) {
     return value;
   }
 
-  return wrapValueInExpressionContainer(value);
+  if (isJsxExpressionContainerExpressionKind(value)) {
+    return wrapValue(value);
+  }
+  return undefined;
 }
 
 export type ParsedAttribute =
@@ -102,25 +274,25 @@ type ParsedJSXNamespaceAttribute = {
   name: string;
   namespace: string;
   value: NakedLiteral | namedTypes.Expression;
-  rawValue: string | number | boolean | null | undefined;
+  rawValue: NakedLiteral;
 };
 
 type ParsedJSXIdentifierAttribute = {
   type: "JSXIdentifier";
   name: string;
   value: NakedLiteral | namedTypes.Expression;
-  rawValue: string | number | boolean | null | undefined;
+  rawValue: NakedLiteral;
 };
 
 type ParsedJSXSpreadAttribute = {
   type: "JSXSpreadAttribute";
   name: undefined | string;
-  value: namedTypes.Expression;
-  rawValue: string | number | boolean | null | undefined;
+  value: NakedLiteral | namedTypes.Expression;
+  rawValue: NakedLiteral;
 };
 
 export function parseLiteral(value: NakedLiteral) {
-  if (value === undefined) return core.nullLiteral();
+  if (value === undefined) return undefined;
   if (value === null) return core.nullLiteral();
   if (typeof value === "string") return core.stringLiteral(value);
   if (typeof value === "symbol")
@@ -136,90 +308,34 @@ export function parseLiteral(value: NakedLiteral) {
 export function parseAttribute(
   attribute: namedTypes.JSXAttribute | namedTypes.JSXSpreadAttribute
 ): ParsedAttribute {
-  if (attribute.type === "JSXSpreadAttribute") {
-    console.log("parse", attribute.argument["name"]);
+  //if (attribute.type === "JSXSpreadAttribute") {
+  const name = getAttributeName(attribute);
+  const value = getAttributeValue(attribute);
+  const rawValue = getRawAttributeValue(attribute);
 
-    let name: string | undefined = undefined;
-    switch (attribute.argument.type) {
-      case "Identifier":
-      case "JSXIdentifier": {
-        name = attribute.argument.name;
-        break;
-      }
-      default: {
-        name = undefined;
-        break;
-      }
-    }
-    //attr?.value?.value || attr?.name?.name || attr?.argument?.name
+  if (isJsxSpreadAttribute(attribute)) {
     return {
       type: "JSXSpreadAttribute",
-      name: name,
-      value: attribute.argument,
-      rawValue: undefined,
+      name: name.name,
+      value: value,
+      rawValue: rawValue,
     };
   }
-
-  let partialParse;
-  switch (attribute.name.type) {
-    case "JSXIdentifier": {
-      partialParse = {
-        type: "JSXIdentifier",
-        name: attribute.name.name,
-      } satisfies Omit<ParsedJSXIdentifierAttribute, "value" | "rawValue">;
-      break;
-    }
-    case "JSXNamespacedName": {
-      partialParse = {
-        type: "JSXNamespacedName",
-        name: attribute.name.name.name,
-        namespace: attribute.name.namespace.name,
-      } satisfies Omit<ParsedJSXNamespaceAttribute, "value" | "rawValue">;
-      break;
-    }
-    default: {
-      throw Error("Malformed attribute");
-    }
-  }
-
-  if (isNakedLiteral(attribute.value)) {
-    console.log(
-      "isNakedLiteral",
-      attribute.value,
-      parseLiteral(attribute.value)
-    );
+  if (isJsxNamespacedAttribute(attribute)) {
     return {
-      ...partialParse,
-      value: parseLiteral(attribute.value),
-      rawValue: attribute.value,
+      type: "JSXNamespacedName",
+      name: name.name,
+      namespace: name.namespace,
+      value: value,
+      rawValue: rawValue,
     };
   }
-  if (isLiteralKind(attribute.value)) {
-    console.log("isLiteralKind", attribute.value, attribute.value.value);
+  if (isJsxIdentifierAttribute(attribute)) {
     return {
-      ...partialParse,
-      value: attribute.value,
-      rawValue: attribute.value.value,
-    };
-  }
-  if (attribute.value.type === "JSXExpressionContainer") {
-    if (isLiteralKind(attribute.value.expression)) {
-      console.log(
-        "wrapped LiteralKind",
-        attribute.value,
-        attribute.value.expression.value
-      );
-      return {
-        ...partialParse,
-        value: attribute.value.expression,
-        rawValue: attribute.value.expression.value,
-      };
-    }
-    console.log("JSXExpressionContainer", attribute.value.expression);
-    return {
-      ...partialParse,
-      value: attribute.value.expression,
-      rawValue: undefined,
+      type: "JSXIdentifier",
+      name: name.name,
+      value: value,
+      rawValue: rawValue,
     };
   }
 }

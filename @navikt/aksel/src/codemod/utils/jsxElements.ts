@@ -1,15 +1,17 @@
+import * as Kinds from "ast-types/gen/kinds";
 import { namedTypes } from "ast-types";
 import core, { ASTPath } from "jscodeshift";
-import { wrapValueInExpressionContainer } from "./expression";
+import { wrapValue } from "./expression";
 import {
   jsxElementKind,
   jsxExpressionContainerKind,
   jsxFragmentKind,
   jsxSpreadChildKind,
   jsxTextKind,
-  literalKind,
+  literalKinds,
 } from "./typeKinds";
 import { generateNewNames } from "./jsxName";
+import { isInList } from "./otherUtils";
 
 const validChildTypes = [
   ...jsxTextKind,
@@ -17,7 +19,7 @@ const validChildTypes = [
   ...jsxSpreadChildKind,
   ...jsxElementKind,
   ...jsxFragmentKind,
-  ...literalKind,
+  ...literalKinds,
 ] as const;
 
 export type JsxChild =
@@ -58,7 +60,7 @@ export function insertChildren(arr: JsxChild[], index, ...items: unknown[]) {
     if (isValidChild(item)) {
       return item;
     }
-    return wrapValueInExpressionContainer(item);
+    return wrapValue(item);
   });
 
   shallowArrCopy.splice(index, 0, ...wrappedItems);
@@ -117,4 +119,12 @@ export function getTemplateLiteral(
     ],
     [core.identifier(identifier)]
   );
+}
+
+export function isJsxElement(value: unknown): value is namedTypes.JSXElement {
+  return isInList(value, jsxElementKind);
+}
+
+export function isJsxFragment(value: unknown): value is Kinds.JSXFragmentKind {
+  return isInList(value, jsxFragmentKind);
 }

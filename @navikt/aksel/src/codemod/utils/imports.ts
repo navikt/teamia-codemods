@@ -81,6 +81,22 @@ export type Imports =
       importedName: string | undefined;
     };
 
+export type ImportedElements =
+  | {
+      type: "JSXComponent";
+      importData: Imports;
+      jsxElements: Collection<namedTypes.JSXElement>;
+    }
+  | {
+      type: "TSType";
+      importData: Imports;
+      tsTypes: Collection<namedTypes.TSTypeReference>;
+    }
+  | {
+      type: "UnusedImport";
+      importData: Imports;
+    };
+
 export function getImportNames(path: Collection<ASTNode>): Imports[] {
   function collect(declaration: namedTypes.ImportDeclaration): Imports[] {
     return declaration.specifiers.map((importSpecifier) => {
@@ -109,6 +125,7 @@ export function getImportNames(path: Collection<ASTNode>): Imports[] {
           importedName: undefined,
         };
       }
+      return undefined;
     });
   }
   return path.nodes().filter(isImportDeclaration).flatMap(collect);

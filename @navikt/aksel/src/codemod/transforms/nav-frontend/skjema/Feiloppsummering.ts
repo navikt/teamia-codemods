@@ -4,7 +4,7 @@ import {
   createChild,
   createComments,
   getTemplateLiteral,
-} from "../../../utils/jsxChildren";
+} from "../../../utils/jsxElements";
 import * as Kinds from "ast-types/gen/kinds";
 import {
   isValidAttributeValue,
@@ -17,6 +17,7 @@ import {
   ArgumentParam,
   isArgumentParam,
   isExpressionKind,
+  isIdentifierKind,
   isJsxExpressionContainerKind,
   isNakedLiteral,
   isObjectExpressionKind,
@@ -28,82 +29,85 @@ export default function feiloppsummeringTransformer(
 ) {
   let errorItems: Kinds.ExpressionKind = j.arrayExpression([]);
   let customRender: ArgumentParam;
-  const commentLines: string[] = [];
+  let commentLines: string[] = [];
+
+  if (!jsx.node.closingElement) {
+    jsx.node.openingElement.selfClosing = false;
+    jsx.node.selfClosing = false;
+    jsx.node.closingElement = j.jsxClosingElement(jsx.node.openingElement.name);
+  }
 
   jsx.node.openingElement.attributes = jsx.node.openingElement.attributes
     .map((attr) => {
       const parsed = parseAttribute(attr);
 
-      if (parsed.type === "JSXSpreadAttribute") {
-        switch (parsed.name) {
-          case "customFeilRender": {
-            if (isArgumentParam(parsed.value)) {
-              customRender = parsed.value;
-            }
-            return undefined;
+      switch (parsed.name) {
+        case "customFeilRender": {
+          if (isArgumentParam(parsed.value)) {
+            customRender = parsed.value;
           }
-          case "feil": {
-            if (isExpressionKind(parsed.value)) {
-              errorItems = parsed.value;
-              return undefined;
-            }
-            commentLines.push(
-              `TODO: ErrorSummary trenger en 'error', men den klarte ikke å utlede hva 'feil' er: ${parsed.value}`
+          return undefined;
+        }
+
+        case "feil": {
+          if (isExpressionKind(parsed.value)) {
+            errorItems = parsed.value;
+          }
+          return undefined;
+        }
+        case "tittel": {
+          if (isValidAttributeValue(parsed.value)) {
+            return j.jsxAttribute(j.jsxIdentifier("heading"), parsed.value);
+          }
+          if (isNakedLiteral(parsed.value)) {
+            return j.jsxAttribute(
+              j.jsxIdentifier("heading"),
+              parseLiteral(parsed.value)
             );
-            return undefined;
           }
-          case "tittel": {
-            if (isValidAttributeValue(parsed.value)) {
-              return j.jsxAttribute(j.jsxIdentifier("heading"), parsed.value);
-            }
-            if (isNakedLiteral(parsed.value)) {
-              return j.jsxAttribute(
-                j.jsxIdentifier("heading"),
-                parseLiteral(parsed.value)
-              );
-            }
-            commentLines.push(
-              `TODO: ErrorSummary trenger en 'heading', men den klarte ikke å utlede hva 'tittel' er: ${parsed.value}`
+          commentLines.push(
+            `TODO: ErrorSummary trenger en 'heading', men den klarte ikke å utlede hva 'tittel' er: ${parsed.value}`
+          );
+          return undefined;
+        }
+        case "innerRef": {
+          if (isJsxExpressionContainerKind(parsed.value)) {
+            return j.jsxAttribute(j.jsxIdentifier("ref"), parsed.value);
+          }
+          if (isIdentifierKind(parsed.value)) {
+            return j.jsxAttribute(
+              j.jsxIdentifier("ref"),
+              j.jsxExpressionContainer(j.jsxIdentifier(parsed.value.name))
             );
-            return undefined;
           }
-          case "innerRef": {
-            if (isJsxExpressionContainerKind(parsed.value)) {
-              return j.jsxAttribute(j.jsxIdentifier("ref"), parsed.value);
-            }
-            if (isObjectExpressionKind(parsed.value)) {
-              return j.jsxAttribute(
-                j.jsxIdentifier("ref"),
-                j.jsxExpressionContainer(parsed.value)
-              );
-            }
-            commentLines.push(
-              `TODO: Komponenten har en 'innerRef', men den klarte ikke å utlede hva den var: ${parsed.value}`
+          if (isObjectExpressionKind(parsed.value)) {
+            return j.jsxAttribute(
+              j.jsxIdentifier("ref"),
+              j.jsxExpressionContainer(parsed.value)
             );
-            return undefined;
           }
-          default: {
-            return attr;
-          }
+          commentLines.push(
+            `TODO: Komponenten har en 'innerRef', men den klarte ikke å utlede hva den var: ${parsed.value}`
+          );
+          return undefined;
+        }
+        default: {
+          return attr;
         }
       }
     })
     .filter(notUndefined);
 
-  setJsxNames(jsx.node, ["ErrorSummary"]);
-
   jsx.node.children = [
     j.jsxExpressionContainer(
-      j.callExpression(
-        j.jsxMemberExpression(
-          // @ts-ignore
-          errorItems,
-          j.jsxIdentifier("map")
-        ),
-        [notUndefined(customRender) ? customRender : defaultErrorRender()]
-      )
+      j.callExpression(j.memberExpression(errorItems, j.jsxIdentifier("map")), [
+        notUndefined(customRender) ? customRender : defaultErrorRender(),
+      ])
     ),
+    ...jsx.node.children,
   ];
+
+  setJsxNames(jsx.node, ["ErrorSummary"]);
 
   if (commentLines.length > 0) {
     jsx.insertBefore(...createComments(commentLines));
@@ -112,7 +116,7 @@ export default function feiloppsummeringTransformer(
 
 export function defaultErrorRender() {
   return core.arrowFunctionExpression(
-    [core.jsxIdentifier("oppsummeringFeil")],
+    [core.jsxIdentifier("error")],
     core.parenthesizedExpression(createErrorSummary())
   );
 }
@@ -120,12 +124,12 @@ export function defaultErrorRender() {
 function createErrorSummary() {
   return createChild(
     ["ErrorSummary", "Item"],
-    [core.jsxExpressionContainer(core.jsxIdentifier("feilmelding"))],
+    [core.jsxExpressionContainer(core.jsxIdentifier("error.feilmelding"))],
     [
       core.jsxAttribute(
         core.jsxIdentifier("href"),
         core.jsxExpressionContainer(
-          getTemplateLiteral("#", "", "skjemaelementId")
+          getTemplateLiteral("#", "", "error.skjemaelementId")
         )
       ),
     ]

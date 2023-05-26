@@ -1,13 +1,14 @@
-import core from "jscodeshift";
+import * as Kinds from "ast-types/gen/kinds";
 import { setJsxBaseName } from "../../../utils/jsxName";
 import {
-  getAttributeName,
+  attributeIsNamed,
   getRawAttributeValue,
+  hasAttribute,
   parseAttribute,
 } from "../../../utils/jsxAttributes";
 import { findImport, getImportNames } from "../../../utils/imports";
-import { notUndefined } from "../../../utils/otherUtils";
-import { createComments } from "../../../utils/jsxChildren";
+import { ImmutableMap, notUndefined } from "../../../utils/otherUtils";
+import { createComments } from "../../../utils/jsxElements";
 
 export default function transformer(file, api) {
   if (
@@ -78,33 +79,37 @@ export default function transformer(file, api) {
        * Endrer navn og verdi på attributer
        */
       //variant="primary"
-      const alertVariantsMap = new Map<string, core.JSXAttribute>([
-        [
-          "Hovedknapp",
-          j.jsxAttribute(
-            j.jsxIdentifier("variant"),
-            j.stringLiteral("primary")
-          ),
-        ],
-        [
-          "Knapp",
-          j.jsxAttribute(
-            j.jsxIdentifier("variant"),
-            j.stringLiteral("secondary")
-          ),
-        ],
-        [
-          "Flatknapp",
-          j.jsxAttribute(
-            j.jsxIdentifier("variant"),
-            j.stringLiteral("tertiary")
-          ),
-        ],
-        [
-          "Fareknapp",
-          j.jsxAttribute(j.jsxIdentifier("variant"), j.stringLiteral("danger")),
-        ],
-      ]);
+      const alertVariantsMap: ImmutableMap<string, Kinds.JSXAttributeKind> =
+        new Map<string, Kinds.JSXAttributeKind>([
+          [
+            "Hovedknapp",
+            j.jsxAttribute(
+              j.jsxIdentifier("variant"),
+              j.stringLiteral("primary")
+            ),
+          ],
+          [
+            "Knapp",
+            j.jsxAttribute(
+              j.jsxIdentifier("variant"),
+              j.stringLiteral("secondary")
+            ),
+          ],
+          [
+            "Flatknapp",
+            j.jsxAttribute(
+              j.jsxIdentifier("variant"),
+              j.stringLiteral("tertiary")
+            ),
+          ],
+          [
+            "Fareknapp",
+            j.jsxAttribute(
+              j.jsxIdentifier("variant"),
+              j.stringLiteral("danger")
+            ),
+          ],
+        ]);
 
       function getVariant(value: unknown) {
         const typeVariantMap = new Map([
@@ -123,9 +128,9 @@ export default function transformer(file, api) {
       if (attributes === undefined) {
         attributes = [];
       }
-      if (attributes.some((attr) => getAttributeName(attr) === "type")) {
+      if (hasAttribute(attributes, "type")) {
         attributes = attributes.map((attr) => {
-          if (getAttributeName(attr) === "type") {
+          if (attributeIsNamed(attr, "type")) {
             return j.jsxAttribute(
               j.jsxIdentifier("variant"),
               j.stringLiteral(getVariant(getRawAttributeValue(attr)))
@@ -173,11 +178,7 @@ export default function transformer(file, api) {
               case "spinner":
                 return j.jsxAttribute(j.jsxIdentifier("loading"));
               case "mini": {
-                if (
-                  attributes.some(
-                    (attr) => getAttributeName(attr) === "kompakt"
-                  )
-                ) {
+                if (hasAttribute(attributes, "kompakt")) {
                   return j.jsxAttribute(
                     j.jsxIdentifier("size"),
                     j.stringLiteral("xsmall")
@@ -189,9 +190,7 @@ export default function transformer(file, api) {
                 );
               }
               case "kompakt": {
-                if (
-                  attributes.some((attr) => getAttributeName(attr) === "mini")
-                ) {
+                if (hasAttribute(attributes, "mini")) {
                   return undefined;
                 }
                 return j.jsxAttribute(

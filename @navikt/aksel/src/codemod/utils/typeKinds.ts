@@ -1,5 +1,5 @@
 import * as Kinds from "ast-types/gen/kinds";
-import { LiteralKind, NodeKind } from "ast-types/gen/kinds";
+import { IdentifierKind, LiteralKind } from "ast-types/gen/kinds";
 import { namedTypes } from "ast-types";
 import { isInList } from "./otherUtils";
 
@@ -8,7 +8,7 @@ export const jsxExpressionContainerKind = ["JSXExpressionContainer"] as const;
 export const jsxSpreadChildKind = ["JSXSpreadChild"] as const;
 export const jsxElementKind = ["JSXElement"] as const;
 export const jsxFragmentKind = ["JSXFragment"] as const;
-export const literalKind = [
+export const literalKinds = [
   "JSXText",
   "Literal",
   "StringLiteral",
@@ -19,9 +19,13 @@ export const literalKind = [
   "RegExpLiteral",
 ] as const;
 
+export const stringLiteralKinds = ["StringLiteral"];
+
 export const objectExpressionKind = ["ObjectExpression"] as const;
 
 export const spreadElementKinds = ["SpreadElement"] as const;
+
+export const jsxEmptyExpressionKinds = ["JSXEmptyExpression"] as const;
 
 export const expressionKinds = [
   "Identifier",
@@ -79,6 +83,19 @@ export const expressionKinds = [
   "TSTypeAssertion",
 ] as const;
 
+export const identifierKinds = [
+  "Identifier",
+  "JSXIdentifier",
+  "TSTypeParameter",
+] as const;
+
+export const jsxIdentifierKinds = ["JSXIdentifier"] as const;
+export const jsxNamespacedNameKinds = ["JSXNamespacedName"] as const;
+
+export const jsxAttributeKinds = ["JSXAttribute"] as const;
+
+export const jsxSpreadAttributeKinds = ["JSXSpreadAttribute"] as const;
+
 export type ArgumentParam = Kinds.ExpressionKind | Kinds.SpreadElementKind;
 export type NakedLiteral =
   | string
@@ -87,15 +104,24 @@ export type NakedLiteral =
   | number
   | RegExp
   | undefined
-  | bigint;
-export type ObjectWithType = { type: string };
+  | bigint
+  | Symbol;
+
+export type ObjectPropertyKeyKind =
+  | Kinds.LiteralKind
+  | Kinds.IdentifierKind
+  | Kinds.ExpressionKind;
 
 export function isLiteralKind(
-  maybeLiteralKind: NodeKind
+  maybeLiteralKind: unknown
 ): maybeLiteralKind is LiteralKind {
-  if (maybeLiteralKind === undefined || maybeLiteralKind?.type === undefined)
-    return false;
-  return (literalKind as readonly string[]).includes(maybeLiteralKind.type);
+  return isInList(maybeLiteralKind, literalKinds);
+}
+
+export function isStringLiteralKind(
+  value: unknown
+): value is Kinds.StringLiteralKind {
+  return isInList(value, stringLiteralKinds);
 }
 
 export function isNakedLiteral(value: unknown): value is NakedLiteral {
@@ -115,11 +141,7 @@ export function isNakedLiteral(value: unknown): value is NakedLiteral {
 }
 
 export function isAstNodeKind(value: unknown): value is namedTypes.Node {
-  return (
-    value !== undefined &&
-    typeof value === "object" &&
-    typeof value["type"] === "string"
-  );
+  return isObject(value) && "type" in value && typeof value.type === "string";
 }
 
 export function isArgumentParam(val: unknown): val is ArgumentParam {
@@ -130,31 +152,48 @@ export function isExpressionKind(val: unknown): val is Kinds.ExpressionKind {
   return isInList(val, expressionKinds);
 }
 
+export function isJsxEmptyExpressionKind(
+  value: unknown
+): value is Kinds.JSXEmptyExpressionKind {
+  return isInList(value, jsxEmptyExpressionKinds);
+}
+
 export function isJsxExpressionContainerKind(
   value: unknown
 ): value is Kinds.JSXExpressionContainerKind {
-  return (
-    isObjectWithType(value) &&
-    (jsxExpressionContainerKind as readonly string[]).includes(value.type)
-  );
+  return isInList(value, jsxExpressionContainerKind);
 }
+
+export function isJsxExpressionContainerExpressionKind(
+  value: unknown
+): value is Kinds.ExpressionKind | Kinds.JSXEmptyExpressionKind {
+  return isJsxEmptyExpressionKind(value) || isExpressionKind(value);
+}
+
 export function isSpreadElementKind(
   val: unknown
 ): val is Kinds.SpreadElementKind {
   return isInList(val, spreadElementKinds);
 }
 
+export function isIdentifierKind(val: unknown): val is IdentifierKind {
+  return isInList(val, identifierKinds);
+}
+
 export function isObjectExpressionKind(
   value: unknown
 ): value is Kinds.ObjectExpressionKind {
-  return (
-    isObjectWithType(value) &&
-    (objectExpressionKind as readonly string[]).includes(value.type)
-  );
+  return isInList(value, objectExpressionKind);
 }
 
-export function isObjectWithType(value: unknown): value is ObjectWithType {
-  return isObject(value) && "type" in value && typeof value.type === "string";
+export function isObjectPropertyKeyKind(
+  value: unknown
+): value is ObjectPropertyKeyKind {
+  return isInList(value, [
+    ...identifierKinds,
+    ...literalKinds,
+    ...expressionKinds,
+  ]);
 }
 
 export function isObject(val: unknown): val is {} {

@@ -1,4 +1,4 @@
-import { isObject } from "./typeKinds";
+import { isAstNodeKind } from "./typeKinds";
 
 export type ImmutableMap<K, V> = Omit<Map<K, V>, "set" | "delete" | "clear">;
 
@@ -20,12 +20,6 @@ export function notEmpty<T>(list: T[]): list is nonEmptyList<T> {
 }
 
 export function isInList(val: unknown, list: readonly string[]) {
-  if (!isObject(val)) return false;
-  if (!("type" in val)) {
-    return false;
-  }
-  if (typeof val.type !== "string") {
-    return false;
-  }
+  if (!isAstNodeKind(val)) return false;
   return list.includes(val.type);
 }

@@ -1,10 +1,11 @@
 import { setJsxBaseName } from "../../../utils/jsxName";
 import {
-  getAttributeName,
+  attributeIsNamed,
   getRawAttributeValue,
+  hasAttribute,
 } from "../../../utils/jsxAttributes";
 import { findImport, getImportNames } from "../../../utils/imports";
-import { createChild, createComments } from "../../../utils/jsxChildren";
+import { createChild, createComments } from "../../../utils/jsxElements";
 
 export default function transformer(file, api) {
   if (
@@ -95,9 +96,10 @@ export default function transformer(file, api) {
 
       // Border har gått fra default false til default true
       // For å bevare oppførsel settes border false hvis prop ikke er tilstede.
-      if (attributes.some((attr) => getAttributeName(attr) === "border")) {
+
+      if (hasAttribute(attributes, "border")) {
         attributes = attributes.map((attr) => {
-          if (getAttributeName(attr) === "border") {
+          if (attributeIsNamed(attr, "border")) {
             const val = getRawAttributeValue(attr);
             //<Lenkepanel border> || <Lenkepanel border={true}>
             if (val === null || val === true) {
@@ -122,7 +124,10 @@ export default function transformer(file, api) {
 
       attributes = attributes
         .map((attr) => {
-          if (["linkCreator", "tittelProps"].includes(getAttributeName(attr))) {
+          if (
+            attributeIsNamed(attr, "linkCreator") ||
+            attributeIsNamed(attr, "tittelProps")
+          ) {
             return undefined;
           }
           return attr;

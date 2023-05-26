@@ -3,7 +3,7 @@ import { setJsxBaseName } from "../../../utils/jsxName";
 import { parseAttribute } from "../../../utils/jsxAttributes";
 import { findImport, getImportNames } from "../../../utils/imports";
 import { notUndefined } from "../../../utils/otherUtils";
-import { createComments } from "../../../utils/jsxChildren";
+import { createComments } from "../../../utils/jsxElements";
 const getAkselSize = (value: unknown): "medium" | "small" => {
   if (typeof value !== "number" && typeof value !== "string") return "medium";
 
