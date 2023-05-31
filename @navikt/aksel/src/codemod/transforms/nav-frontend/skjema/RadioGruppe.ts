@@ -1,4 +1,4 @@
-import core, { ASTPath } from "jscodeshift";
+import { JSCodeshift, ASTPath } from "jscodeshift";
 import { namedTypes } from "ast-types";
 import { parseAttribute } from "../../../utils/jsxAttributes";
 import { notEmpty } from "../../../utils/otherUtils";
@@ -7,7 +7,7 @@ import { setJsxNames } from "../../../utils/jsxName";
 import { wrapValue } from "../../../utils/expression";
 
 export default function RadioGruppeTransformer(
-  j: core.JSCodeshift,
+  j: JSCodeshift,
   jsx: ASTPath<namedTypes.JSXElement>
 ) {
   const commentLines: string[] = [];

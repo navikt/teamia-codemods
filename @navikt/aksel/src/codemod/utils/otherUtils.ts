@@ -21,5 +21,8 @@ export function notEmpty<T>(list: T[]): list is nonEmptyList<T> {
 
 export function isInList(val: unknown, list: readonly string[]) {
   if (!isAstNodeKind(val)) return false;
-  return list.includes(val.type);
+  return tupleIncludes(list, val.type);
+}
+export function tupleIncludes(tuple: readonly unknown[], val: unknown) {
+  return tuple.includes(val);
 }

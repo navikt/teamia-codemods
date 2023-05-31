@@ -1,5 +1,5 @@
 {
-  "name": "@navikt/aksel",
+  "name": "@navikt/teamia-codemods",
   "version": "2.9.8",
   "description": "Aksel command line interface. Handles css-imports, codemods and more",
   "author": "Aksel | NAV designsystem team",

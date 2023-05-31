@@ -1,14 +1,21 @@
 import * as Kinds from "ast-types/gen/kinds";
-import { namedTypes } from "ast-types";
-import core, { ASTPath } from "jscodeshift";
+import { builders, namedTypes } from "ast-types";
+import core, { ASTPath, Collection } from "jscodeshift";
 import { wrapValue } from "./expression";
 import {
+  isAstNodeKind,
+  isExpressionKind,
+  isIdentifierKind,
+  isJsxEmptyExpressionKind,
+  isJsxMemberExpressionKind,
+  isJsxNamespacedNameKinds,
+  isNakedLiteral,
+  isStringLiteralKind,
   jsxElementKind,
   jsxExpressionContainerKind,
   jsxFragmentKind,
   jsxSpreadChildKind,
   jsxTextKind,
-  literalKinds,
 } from "./typeKinds";
 import { generateNewNames } from "./jsxName";
 import { isInList } from "./otherUtils";
@@ -19,7 +26,6 @@ const validChildTypes = [
   ...jsxSpreadChildKind,
   ...jsxElementKind,
   ...jsxFragmentKind,
-  ...literalKinds,
 ] as const;
 
 export type JsxChild =
@@ -35,10 +41,19 @@ export type JsxChild =
   | namedTypes.NullLiteral
   | namedTypes.BooleanLiteral
   | namedTypes.RegExpLiteral;
-//Record<any, any> & {type: typeof validChildTypes[number]};
+
 export function isValidChild(value: unknown): value is JsxChild {
-  if (typeof value !== "object" || value === null) return false;
-  return (validChildTypes as readonly string[]).includes(value["type"]);
+  return isInList(value, validChildTypes);
+}
+
+export function wrapChild(value: unknown) {
+  if (isValidChild(value)) return value;
+  if (isNakedLiteral(value)) return builders.jsxText(String(value));
+  if (isStringLiteralKind(value)) return builders.jsxText(value.value);
+  if (isExpressionKind(value)) return builders.jsxExpressionContainer(value);
+  if (isJsxEmptyExpressionKind(value))
+    return builders.jsxExpressionContainer(value);
+  return undefined;
 }
 
 export function getChildren(
@@ -72,6 +87,56 @@ export function prependChildren(arr: JsxChild[], ...items: unknown[]) {
 }
 export function appendChildren(arr: JsxChild[], ...items: unknown[]) {
   return insertChildren(arr, arr.length, ...items);
+}
+
+export function addChildren(
+  jsxElementPath: ASTPath<Kinds.JSXElementKind>,
+  children: Kinds.JSXElementKind["children"],
+  position?: number | "first" | "last"
+) {
+  if (children.length === 0) {
+    return;
+  }
+
+  if (!jsxElementPath.node.closingElement) {
+    jsxElementPath.node.openingElement.selfClosing = false;
+    jsxElementPath.node.selfClosing = false;
+    jsxElementPath.node.closingElement = builders.jsxClosingElement(
+      jsxElementPath.node.openingElement.name
+    );
+  }
+  const existingChildren =
+    jsxElementPath.node.children instanceof Array
+      ? [...jsxElementPath.node.children]
+      : undefined;
+
+  if (existingChildren !== undefined && existingChildren.length > 0) {
+    switch (position) {
+      case undefined: {
+        jsxElementPath.node.children = [...existingChildren, ...children];
+        break;
+      }
+      case "first": {
+        jsxElementPath.node.children = [...children, ...existingChildren];
+        break;
+      }
+      case "last": {
+        jsxElementPath.node.children = [...existingChildren, ...children];
+        break;
+      }
+      default: {
+        existingChildren.splice(position, 0, ...children);
+        jsxElementPath.node.children = existingChildren.splice(
+          position,
+          0,
+          ...children
+        );
+        break;
+      }
+    }
+  } else {
+    jsxElementPath.node.children = children;
+  }
 }
 
 export function createChild(
@@ -128,3 +193,25 @@ export function isJsxElement(value: unknown): value is namedTypes.JSXElement {
 export function isJsxFragment(value: unknown): value is Kinds.JSXFragmentKind {
   return isInList(value, jsxFragmentKind);
 }
+
+export function isJsxText(value: unknown): value is Kinds.JSXTextKind {
+  return isInList(value, jsxTextKind);
+}
+
+export function findJsxByNamespace(path: Collection, namespace: string) {
+  path.find(namedTypes.JSXElement, findRootNamespace(namespace));
+}
+
+function findRootNamespace(namespace: string): (node: unknown) => boolean {
+  return function traverse(node: unknown): boolean {
+    if (!isAstNodeKind(node)) return false;
+    if (isJsxElement(node)) return traverse(node.openingElement.name);
+    if (isIdentifierKind(node)) return node.name === namespace;
+    if (isJsxNamespacedNameKinds(node))
+      return node.namespace.name === namespace;
+    if (isJsxMemberExpressionKind(node)) return traverse(node.object);
+    return false;
+  };
+}
+
+//.openingElement.name.object.name

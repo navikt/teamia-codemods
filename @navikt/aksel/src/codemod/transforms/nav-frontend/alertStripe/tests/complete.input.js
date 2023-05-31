@@ -1,4 +1,17 @@
-import Alertstripe, { AlertStripe as Bar } from "nav-frontend-alertstriper";
+import Alertstripe, {
+  default as Bar,
+  AlertStripeInfo,
+  AlertStripeSuksess,
+  AlertStripeAdvarsel,
+  AlertStripeFeil,
+  AlertStripeFeil as AnnetNavn,
+} from "nav-frontend-alertstriper";
+import KnappBase, {
+  Knapp,
+  Hovedknapp,
+  Fareknapp,
+  Flatknapp,
+} from "nav-frontend-knapper";
 
 const AlertStripeFixture = () => {
   return (
@@ -17,46 +30,31 @@ const AlertStripeFixture = () => {
         type="feil"
         form="inline"
         size="2rem"
-        ekstra1="ekstra1"
-        ekstra2={"ekstra2"}
-        ekstra3
+        extra1="extra1"
+        extra2={"extra2"}
+        extra3
       />
       <Bar
         type="feil"
         form="inline"
         size="2rem"
-        ekstra1="ekstra1"
-        ekstra2={"ekstra2"}
-        ekstra3
+        extra1="extra1"
+        extra2={"extra2"}
+        extra3
       />
-      <Alertstripe type="info" ekstra1="ekstra1" ekstra2={"ekstra2"} ekstra3 />
-      <Alertstripe
-        type="suksess"
-        ekstra1="ekstra1"
-        ekstra2={"ekstra2"}
-        ekstra3
-      />
-      <Alertstripe
-        type="advarsel"
-        ekstra1="ekstra1"
-        ekstra2={"ekstra2"}
-        ekstra3
-      />
-      <Alertstripe type="feil" ekstra1="ekstra1" ekstra2={"ekstra2"} ekstra3 />
-      <Alertstripe
-        form="inline"
-        ekstra1="ekstra1"
-        ekstra2={"ekstra2"}
-        ekstra3
-      />
-      <Alertstripe size="2rem" ekstra1="ekstra1" ekstra2={"ekstra2"} ekstra3 />
+      <Alertstripe type="info" extra1="extra1" extra2={"extra2"} extra3 />
+      <Alertstripe type="suksess" extra1="extra1" extra2={"extra2"} extra3 />
+      <Alertstripe type="advarsel" extra1="extra1" extra2={"extra2"} extra3 />
+      <Alertstripe type="feil" extra1="extra1" extra2={"extra2"} extra3 />
+      <Alertstripe form="inline" extra1="extra1" extra2={"extra2"} extra3 />
+      <Alertstripe size="2rem" extra1="extra1" extra2={"extra2"} extra3 />
       <Alertstripe
         type="feil"
         form="inline"
         size="2rem"
-        ekstra1="ekstra1"
-        ekstra2={"ekstra2"}
-        ekstra3
+        extra1="extra1"
+        extra2={"extra2"}
+        extra3
       />
 
       <Foo type="feil" form="inline" size="2rem">
@@ -85,6 +83,12 @@ const AlertStripeFixture = () => {
       <Alertstripe size={"23px"} />
       <Alertstripe type={"feil"} form={"inline"} size={"22"} />
       <Alertstripe {...type} {...size} {...form} />
+
+      <AlertStripeInfo />
+      <AlertStripeSuksess />
+      <AlertStripeAdvarsel />
+      <AlertStripeFeil />
+      <AnnetNavn />
     </div>
   );
 };

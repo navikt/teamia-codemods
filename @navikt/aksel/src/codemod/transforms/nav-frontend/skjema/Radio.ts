@@ -1,4 +1,4 @@
-import core, { ASTPath } from "jscodeshift";
+import { JSCodeshift, ASTPath } from "jscodeshift";
 import { namedTypes } from "ast-types";
 import {
   hasAttribute,
@@ -12,7 +12,7 @@ import * as Kinds from "ast-types/gen/kinds";
 import { wrapValue } from "../../../utils/expression";
 
 export default function RadioTransformer(
-  j: core.JSCodeshift,
+  j: JSCodeshift,
   jsx: ASTPath<namedTypes.JSXElement>
 ) {
   const commentLines: string[] = [];

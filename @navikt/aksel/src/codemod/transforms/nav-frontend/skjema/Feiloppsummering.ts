@@ -1,10 +1,6 @@
-import core, { ASTPath } from "jscodeshift";
-import { namedTypes } from "ast-types";
-import {
-  createChild,
-  createComments,
-  getTemplateLiteral,
-} from "../../../utils/jsxElements";
+import { JSCodeshift, ASTPath } from "jscodeshift";
+import { namedTypes, builders } from "ast-types";
+
 import * as Kinds from "ast-types/gen/kinds";
 import {
   isValidAttributeValue,
@@ -20,11 +16,16 @@ import {
   isIdentifierKind,
   isJsxExpressionContainerKind,
   isNakedLiteral,
-  isObjectExpressionKind,
 } from "../../../utils/typeKinds";
+import {
+  createChild,
+  createComments,
+  getTemplateLiteral,
+} from "../../../utils/jsxElements";
+import { isObjectExpressionKind } from "../../../utils/object";
 
 export default function feiloppsummeringTransformer(
-  j: core.JSCodeshift,
+  j: JSCodeshift,
   jsx: ASTPath<namedTypes.JSXElement>
 ) {
   let errorItems: Kinds.ExpressionKind = j.arrayExpression([]);
@@ -115,20 +116,24 @@ export default function feiloppsummeringTransformer(
 }
 
 export function defaultErrorRender() {
-  return core.arrowFunctionExpression(
-    [core.jsxIdentifier("error")],
-    core.parenthesizedExpression(createErrorSummary())
+  return builders.arrowFunctionExpression(
+    [builders.jsxIdentifier("error")],
+    builders.parenthesizedExpression(createErrorSummary())
   );
 }
 
 function createErrorSummary() {
   return createChild(
     ["ErrorSummary", "Item"],
-    [core.jsxExpressionContainer(core.jsxIdentifier("error.feilmelding"))],
     [
-      core.jsxAttribute(
-        core.jsxIdentifier("href"),
-        core.jsxExpressionContainer(
+      builders.jsxExpressionContainer(
+        builders.jsxIdentifier("error.feilmelding")
+      ),
+    ],
+    [
+      builders.jsxAttribute(
+        builders.jsxIdentifier("href"),
+        builders.jsxExpressionContainer(
           getTemplateLiteral("#", "", "error.skjemaelementId")
         )
       ),

@@ -6,6 +6,12 @@ export const migrations: {
   "nav-frontend": [
     {
       description:
+        "Runs all codemods for nav-frontend -> ds-react migration, _WILL_ break stuff",
+      value: "nav-frontend-preset",
+      path: "nav-frontend/preset/preset",
+    },
+    {
+      description:
         "nav-frontend-alertstriper to @navikt/ds-react migration, will probably break stuff",
       value: "nav-frontend-alertstriper",
       path: "nav-frontend/alertStripe/alertStripe",
@@ -45,6 +51,24 @@ export const migrations: {
         "nav-frontend-skjema to @navikt/ds-react migration, will probably break stuff",
       value: "nav-frontend-skjema",
       path: "nav-frontend/skjema/skjema",
+    },
+    {
+      description:
+        "nav-frontend-spinner to @navikt/ds-react migration, will probably break stuff",
+      value: "nav-frontend-spinner",
+      path: "nav-frontend/spinner/spinner",
+    },
+    {
+      description:
+        "nav-frontend-toggle to @navikt/ds-react migration, will probably break stuff",
+      value: "nav-frontend-toggle",
+      path: "nav-frontend/toggle/toggle",
+    },
+    {
+      description:
+        "nav-frontend-typografi to @navikt/ds-react migration, will probably break stuff",
+      value: "nav-frontend-typografi",
+      path: "nav-frontend/typografi/typografi",
     },
   ],
   "1.0.0": [

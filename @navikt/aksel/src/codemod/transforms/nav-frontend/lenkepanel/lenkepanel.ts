@@ -1,10 +1,10 @@
-import { setJsxBaseName } from "../../../utils/jsxName";
+import { setJsxName } from "../../../utils/jsxName";
 import {
   attributeIsNamed,
   getRawAttributeValue,
   hasAttribute,
 } from "../../../utils/jsxAttributes";
-import { findImport, getImportNames } from "../../../utils/imports";
+import { findImports, getImportData } from "../../../utils/imports";
 import { createChild, createComments } from "../../../utils/jsxElements";
 
 export default function transformer(file, api) {
@@ -24,15 +24,15 @@ export default function transformer(file, api) {
   const j = api.jscodeshift;
   const root = j(file.source);
 
-  const navFrontendPath = findImport(root, "nav-frontend-lenkepanel");
-  const dsReactPath = findImport(root, "@navikt/ds-react");
+  const navFrontendPath = findImports(root, "nav-frontend-lenkepanel");
+  const dsReactPath = findImports(root, "@navikt/ds-react");
 
   // Early return if file does not import component
   if (navFrontendPath.size() === 0) {
     return;
   }
 
-  const importNames = getImportNames(navFrontendPath);
+  const importNames = getImportData(navFrontendPath);
   const jsxElements = importNames.map((imp) => ({
     importData: imp,
     jsxElements: root.findJSXElements(imp.localName),
@@ -73,7 +73,7 @@ export default function transformer(file, api) {
       /**
        * Endrer navn på komponent
        */
-      setJsxBaseName(jsx.node, "LinkPanel");
+      setJsxName(jsx.node, "LinkPanel");
 
       /**
        * Legger til children

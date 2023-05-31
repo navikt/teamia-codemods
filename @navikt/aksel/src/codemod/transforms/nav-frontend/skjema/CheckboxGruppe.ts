@@ -1,4 +1,4 @@
-import core, { ASTPath } from "jscodeshift";
+import { JSCodeshift, ASTPath } from "jscodeshift";
 import { namedTypes } from "ast-types";
 import { parseAttribute } from "../../../utils/jsxAttributes";
 import { notEmpty, notUndefined } from "../../../utils/otherUtils";
@@ -6,7 +6,7 @@ import { createComments } from "../../../utils/jsxElements";
 import { setJsxNames } from "../../../utils/jsxName";
 
 export default function CheckboxGruppeTransformer(
-  j: core.JSCodeshift,
+  j: JSCodeshift,
   jsx: ASTPath<namedTypes.JSXElement>
 ) {
   const commentLines: string[] = [];

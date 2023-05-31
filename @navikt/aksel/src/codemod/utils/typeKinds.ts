@@ -23,7 +23,17 @@ export const stringLiteralKinds = ["StringLiteral"];
 
 export const objectExpressionKind = ["ObjectExpression"] as const;
 
+export const objectPropertyKind = ["ObjectProperty", "Property"] as const;
+
+export const objectMethodKind = ["ObjectMethod"] as const;
+
+export const arrayExpressionKinds = ["ArrayExpression"] as const;
+
+export const restElementKinds = ["RestElement"] as const;
+
 export const spreadElementKinds = ["SpreadElement"] as const;
+
+export const spreadPropertyKinds = ["SpreadProperty"] as const;
 
 export const jsxEmptyExpressionKinds = ["JSXEmptyExpression"] as const;
 
@@ -83,6 +93,29 @@ export const expressionKinds = [
   "TSTypeAssertion",
 ] as const;
 
+export const functionExpressionKinds = [
+  "FunctionExpression",
+  "ArrowFunctionExpression",
+] as const;
+
+export const patternKinds = [
+  "Identifier",
+  "RestElement",
+  "SpreadElementPattern",
+  "PropertyPattern",
+  "ObjectPattern",
+  "ArrayPattern",
+  "AssignmentPattern",
+  "SpreadPropertyPattern",
+  "JSXIdentifier",
+  "PrivateName",
+  "TSAsExpression",
+  "TSNonNullExpression",
+  "TSTypeParameter",
+  "TSTypeAssertion",
+  "TSParameterProperty",
+] as const;
+
 export const identifierKinds = [
   "Identifier",
   "JSXIdentifier",
@@ -92,9 +125,29 @@ export const identifierKinds = [
 export const jsxIdentifierKinds = ["JSXIdentifier"] as const;
 export const jsxNamespacedNameKinds = ["JSXNamespacedName"] as const;
 
+export const jsxMemberExpressionKinds = ["JSXMemberExpression"] as const;
+
 export const jsxAttributeKinds = ["JSXAttribute"] as const;
 
 export const jsxSpreadAttributeKinds = ["JSXSpreadAttribute"] as const;
+
+export const importdeclarationKinds = ["ImportDeclaration"] as const;
+
+export const importSpecifierKinds = ["ImportSpecifier"] as const;
+export const importDefaultSpecifierKinds = ["ImportDefaultSpecifier"] as const;
+export const importNamespaceSpecifierKinds = [
+  "ImportNamespaceSpecifier",
+] as const;
+export const importKinds = [
+  ...importSpecifierKinds,
+  ...importDefaultSpecifierKinds,
+  ...importNamespaceSpecifierKinds,
+] as const;
+
+export type ImportKinds = Exclude<
+  Kinds.ModuleSpecifierKind,
+  Kinds.ExportSpecifierKind
+>;
 
 export type ArgumentParam = Kinds.ExpressionKind | Kinds.SpreadElementKind;
 export type NakedLiteral =
@@ -144,12 +197,24 @@ export function isAstNodeKind(value: unknown): value is namedTypes.Node {
   return isObject(value) && "type" in value && typeof value.type === "string";
 }
 
-export function isArgumentParam(val: unknown): val is ArgumentParam {
-  return isSpreadElementKind(val) || isExpressionKind(val);
+export function isArgumentParam(value: unknown): value is ArgumentParam {
+  return isSpreadElementKind(value) || isExpressionKind(value);
 }
 
-export function isExpressionKind(val: unknown): val is Kinds.ExpressionKind {
-  return isInList(val, expressionKinds);
+export function isExpressionKind(
+  value: unknown
+): value is Kinds.ExpressionKind {
+  return isInList(value, expressionKinds);
+}
+
+export function isFunctionExpressionKind(
+  value: unknown
+): value is Kinds.FunctionExpressionKind | Kinds.ArrowFunctionExpressionKind {
+  return isInList(value, functionExpressionKinds);
+}
+
+export function isPatternKind(value: unknown): value is Kinds.ExpressionKind {
+  return isInList(value, patternKinds);
 }
 
 export function isJsxEmptyExpressionKind(
@@ -171,33 +236,53 @@ export function isJsxExpressionContainerExpressionKind(
 }
 
 export function isSpreadElementKind(
-  val: unknown
-): val is Kinds.SpreadElementKind {
-  return isInList(val, spreadElementKinds);
-}
-
-export function isIdentifierKind(val: unknown): val is IdentifierKind {
-  return isInList(val, identifierKinds);
-}
-
-export function isObjectExpressionKind(
   value: unknown
-): value is Kinds.ObjectExpressionKind {
-  return isInList(value, objectExpressionKind);
+): value is Kinds.SpreadElementKind {
+  return isInList(value, spreadElementKinds);
 }
 
-export function isObjectPropertyKeyKind(
+export function isRestElementKind(
   value: unknown
-): value is ObjectPropertyKeyKind {
-  return isInList(value, [
-    ...identifierKinds,
-    ...literalKinds,
-    ...expressionKinds,
-  ]);
+): value is Kinds.RestElementKind {
+  return isInList(value, restElementKinds);
 }
 
-export function isObject(val: unknown): val is {} {
-  if (val === undefined) return false;
-  if (val === null) return false;
-  return typeof val === "object";
+export function isSpreadPropertyKind(
+  value: unknown
+): value is Kinds.SpreadPropertyKind {
+  return isInList(value, spreadPropertyKinds);
+}
+
+export function isIdentifierKind(value: unknown): value is IdentifierKind {
+  return isInList(value, identifierKinds);
+}
+
+export function isJsxNamespacedNameKinds(
+  value: unknown
+): value is Kinds.JSXNamespacedNameKind {
+  return isInList(value, jsxNamespacedNameKinds);
+}
+
+export function isJsxMemberExpressionKind(
+  value: unknown
+): value is Kinds.JSXMemberExpressionKind {
+  return isInList(value, jsxMemberExpressionKinds);
+}
+
+export function isArrayExpressionKind(
+  value: unknown
+): value is Kinds.ArrayExpressionKind {
+  return isInList(value, arrayExpressionKinds);
+}
+
+export function isArraySpreadKind(
+  value: unknown
+): value is Kinds.SpreadElementKind | Kinds.RestElementKind {
+  return isSpreadElementKind(value) || isRestElementKind(value);
+}
+
+export function isObject(value: unknown): value is {} {
+  if (value === undefined) return false;
+  if (value === null) return false;
+  return typeof value === "object";
 }

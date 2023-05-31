@@ -1,4 +1,4 @@
-import core, { ASTPath } from "jscodeshift";
+import { JSCodeshift, ASTPath } from "jscodeshift";
 import { namedTypes } from "ast-types";
 import { parseAttribute } from "../../../utils/jsxAttributes";
 import { setJsxNames } from "../../../utils/jsxName";
@@ -6,7 +6,7 @@ import { matchName } from "./skjema";
 import { ImportedElements } from "../../../utils/imports";
 
 export default function TextareaTransformer(
-  j: core.JSCodeshift,
+  j: JSCodeshift,
   jsx: ASTPath<namedTypes.JSXElement>,
   imp: ImportedElements
 ) {

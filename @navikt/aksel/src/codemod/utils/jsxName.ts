@@ -4,6 +4,10 @@ import * as core from "jscodeshift";
 export function getJsxBaseName(jsxElement: namedTypes.JSXElement): string {
   return getJsxNamesAsArray(jsxElement)[0];
 }
+
+export function getJsxLeafName(jsxElement: namedTypes.JSXElement): string {
+  return getJsxNamesAsArray(jsxElement).at(-1);
+}
 export function getJsxNames(jsxElement: namedTypes.JSXElement): string {
   return getJsxNamesAsArray(jsxElement).join(".");
 }
@@ -80,6 +84,16 @@ export function generateNewNames(newNames: string[]) {
   }
   return cursor;
 }
+
+export const setJsxName = (jsxElement: namedTypes.JSXElement, name: string) => {
+  const jsxName = core.jsxIdentifier(name);
+  if (!jsxElement.closingElement) {
+    jsxElement.openingElement.name = jsxName;
+  } else {
+    jsxElement.openingElement.name = jsxName;
+    jsxElement.closingElement.name = jsxName;
+  }
+};
 
 export const setJsxBaseName = (
   jsxElement: namedTypes.JSXElement,

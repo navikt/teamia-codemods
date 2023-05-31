@@ -1,17 +1,21 @@
 import {
-  findImport,
-  getImportNames,
+  findImports,
+  getImportData,
+  ImportData,
   ImportedElements,
-  Imports,
 } from "../../../utils/imports";
-import { createComments } from "../../../utils/jsxElements";
 import { namedTypes } from "ast-types";
 import core from "jscodeshift";
-import { ImmutableMap, notUndefined } from "../../../utils/otherUtils";
+import {
+  ImmutableMap,
+  notUndefined,
+  tupleIncludes,
+} from "../../../utils/otherUtils";
 import feiloppsummeringTransformer from "./Feiloppsummering";
-import inputTransformer from "./Input";
-import TextareaTransformer from "./Textarea";
 import CheckboxTransformer from "./Checkbox";
+import { createComments } from "../../../utils/jsxElements";
+import TextareaTransformer from "./Textarea";
+import InputTransformer from "./Input";
 import CheckboxGruppeTransformer from "./CheckboxGruppe";
 import RadioTransformer from "./Radio";
 import RadioGruppeTransformer from "./RadioGruppe";
@@ -48,7 +52,7 @@ const unMigratableImports = [
   ...unMigratableProps,
 ] as const;
 
-function getMigratableNewName(name: Imports) {
+function getMigratableNewName(name: ImportData) {
   if (
     typeof name.localName !== "string" &&
     typeof name.importedName !== "string"
@@ -197,19 +201,15 @@ function getSpecifierName(specifier: Specifier) {
   };
 }
 
-export function matchName(imp: Imports, name: string): boolean {
+export function matchName(imp: ImportData, name: string): boolean {
   return getImportedName(imp) === name || getLocalName(imp) === name;
 }
 
-function getImportedName(imp: Imports) {
-  return imp.importedName || imp.localName;
+function getImportedName(imp: ImportData) {
+  return imp?.importedName || imp.localName;
 }
-function getLocalName(imp: Imports) {
+function getLocalName(imp: ImportData) {
   return imp.localName || imp.importedName;
-}
-
-function tupleIncludes<T extends readonly string[]>(tuple: T, val: string) {
-  return tuple.includes(val);
 }
 
 export default function transformer(file, api) {
@@ -227,15 +227,15 @@ export default function transformer(file, api) {
   const j = api.jscodeshift;
   const root = j(file.source);
 
-  const navFrontendPath = findImport(root, "nav-frontend-skjema");
-  const dsReactPath = findImport(root, "@navikt/ds-react");
+  const navFrontendPath = findImports(root, "nav-frontend-skjema");
+  const dsReactPath = findImports(root, "@navikt/ds-react");
 
   // Early return if file does not import skjema
   if (navFrontendPath.size() === 0) {
     return;
   }
 
-  const importNames = getImportNames(navFrontendPath);
+  const importNames = getImportData(navFrontendPath);
 
   const importedElements = importNames.map((imp): ImportedElements => {
     const jsxLocalName = root.findJSXElements(getLocalName(imp));
@@ -326,6 +326,8 @@ export default function transformer(file, api) {
 
   // Fjern alle paths som kan migreres, hvis ingen specifiers er igjen fjern import deklarasjonen.
   navFrontendPath.forEach((declaration) => {
+    root.find(j.Program).closestScope();
+
     declaration.node.specifiers = declaration.node.specifiers.filter(
       (specifier) => {
         if (
@@ -383,7 +385,7 @@ export default function transformer(file, api) {
         }
 
         if (matchName(imp.importData, "Input")) {
-          inputTransformer(j, jsx);
+          InputTransformer(j, jsx);
         }
 
         if (

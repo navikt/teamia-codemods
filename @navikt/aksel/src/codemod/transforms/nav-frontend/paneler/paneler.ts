@@ -1,4 +1,4 @@
-import { findImport } from "../../../utils/imports";
+import { findImports } from "../../../utils/imports";
 
 export default function transformer(file, api) {
   if (
@@ -15,8 +15,8 @@ export default function transformer(file, api) {
   const j = api.jscodeshift;
   const root = j(file.source);
 
-  const navFrontendPath = findImport(root, "nav-frontend-paneler");
-  const dsReactPath = findImport(root, "@navikt/ds-react");
+  const navFrontendPath = findImports(root, "nav-frontend-paneler");
+  const dsReactPath = findImports(root, "@navikt/ds-react");
 
   // Early return if file does not import alertstriper
   if (navFrontendPath.size() === 0) {

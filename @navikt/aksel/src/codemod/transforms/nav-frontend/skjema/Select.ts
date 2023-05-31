@@ -1,4 +1,4 @@
-import core, { ASTPath } from "jscodeshift";
+import { JSCodeshift, ASTPath } from "jscodeshift";
 import { namedTypes } from "ast-types";
 import { parseAttribute } from "../../../utils/jsxAttributes";
 import { notEmpty } from "../../../utils/otherUtils";
@@ -7,7 +7,7 @@ import { wrapValue } from "../../../utils/expression";
 import { breddeToWidth } from "./skjema";
 
 export default function SelectTransformer(
-  j: core.JSCodeshift,
+  j: JSCodeshift,
   jsx: ASTPath<namedTypes.JSXElement>
 ) {
   const commentLines: string[] = [];

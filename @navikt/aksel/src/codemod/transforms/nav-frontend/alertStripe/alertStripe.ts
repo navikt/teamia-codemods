@@ -1,8 +1,17 @@
-import core from "jscodeshift";
-import { setJsxBaseName } from "../../../utils/jsxName";
-import { parseAttribute } from "../../../utils/jsxAttributes";
-import { findImport, getImportNames } from "../../../utils/imports";
-import { notUndefined } from "../../../utils/otherUtils";
+import { setJsxName } from "../../../utils/jsxName";
+import {
+  getPropValue,
+  hasProp,
+  replaceProp,
+  setProp,
+} from "../../../utils/jsxAttributes";
+import {
+  addImports,
+  findImports,
+  getImportData,
+  removeImports,
+} from "../../../utils/imports";
+import { isNakedLiteral } from "../../../utils/typeKinds";
 import { createComments } from "../../../utils/jsxElements";
 const getAkselSize = (value: unknown): "medium" | "small" => {
   if (typeof value !== "number" && typeof value !== "string") return "medium";
@@ -59,174 +68,103 @@ export default function transformer(file, api) {
   const j = api.jscodeshift;
   const root = j(file.source);
 
-  const navFrontendPath = findImport(root, "nav-frontend-alertstriper");
-  const dsReactPath = findImport(root, "@navikt/ds-react");
+  const navFrontendPath = findImports(root, "nav-frontend-alertstriper");
+  //const dsReactPath = findImports(root, "@navikt/ds-react");
 
   // Early return if file does not import alertstriper
   if (navFrontendPath.size() === 0) {
     return;
   }
 
-  const importNames = getImportNames(navFrontendPath);
-  const jsxElements = importNames.map((imp) => ({
+  const importData = getImportData(navFrontendPath);
+  const jsxElements = importData.map((imp) => ({
     importData: imp,
     jsxElements: root.findJSXElements(imp.localName),
   }));
 
   // Muter state:
   // hvis ds-react ikke finnes, lag den, ellers append Alert
-  if (dsReactPath.size() === 0) {
-    navFrontendPath.replaceWith(
-      j.importDeclaration(
-        [j.importSpecifier(j.jsxIdentifier("Alert"))],
-        j.stringLiteral("@navikt/ds-react")
-      )
-    );
-  } else {
-    dsReactPath.forEach((declaration) => {
-      const importDeclarations = declaration.node.specifiers;
-      if (
-        !importDeclarations.some((specifier) => {
-          return (
-            specifier.type === "ImportSpecifier" &&
-            specifier.local.name === "Alert"
-          );
-        })
-      ) {
-        declaration.node.specifiers = [
-          ...importDeclarations,
-          j.importSpecifier(j.jsxIdentifier("Alert")),
-        ];
-        navFrontendPath.remove();
-      }
-    });
-  }
+  addImports(root, ["Alert"], "@navikt/ds-react");
+  removeImports(
+    root,
+    [
+      "*",
+      "default",
+      "AlertStripeInfo",
+      "AlertStripeSuksess",
+      "AlertStripeAdvarsel",
+      "AlertStripeFeil",
+    ],
+    "nav-frontend-alertstriper"
+  );
 
-  jsxElements?.forEach((imp) => {
-    imp.jsxElements?.forEach((jsx) => {
+  jsxElements.forEach((imp) => {
+    imp.jsxElements.forEach((jsx) => {
       /**
        * Endrer navn på komponentene
        */
-      setJsxBaseName(jsx.node, "Alert");
-
-      /**
-       * Endrer navn og verdi på attributer
-       */
-      const alertVariantsMap = new Map<string, core.JSXAttribute>([
-        [
-          "AlertStripeFeil",
-          j.jsxAttribute(j.jsxIdentifier("variant"), j.stringLiteral("error")),
-        ],
-        [
-          "AlertStripeSuksess",
-          j.jsxAttribute(
-            j.jsxIdentifier("variant"),
-            j.stringLiteral("success")
-          ),
-        ],
-        [
-          "AlertStripeAdvarsel",
-          j.jsxAttribute(
-            j.jsxIdentifier("variant"),
-            j.stringLiteral("warning")
-          ),
-        ],
-        [
-          "AlertStripeInfo",
-          j.jsxAttribute(j.jsxIdentifier("variant"), j.stringLiteral("info")),
-        ],
-      ]);
-
-      let attributes = jsx.node.openingElement.attributes;
-
-      if (imp.importData.type === "ImportSpecifier") {
-        switch (imp.importData.localName) {
-          case "AlertStripeFeil": {
-            attributes = [
-              alertVariantsMap.get("AlertStripeFeil"),
-              ...attributes,
-            ];
-            break;
-          }
-          case "AlertStripeSuksess": {
-            attributes = [
-              alertVariantsMap.get("AlertStripeSuksess"),
-              ...attributes,
-            ];
-            break;
-          }
-          case "AlertStripeAdvarsel": {
-            attributes = [
-              alertVariantsMap.get("AlertStripeAdvarsel"),
-              ...attributes,
-            ];
-            break;
-          }
-          case "AlertStripeInfo": {
-            attributes = [
-              alertVariantsMap.get("AlertStripeInfo"),
-              ...attributes,
-            ];
-            break;
-          }
-          default:
-            break;
-        }
-      }
+      setJsxName(jsx.node, "Alert");
 
       const commentLines: string[] = [];
 
-      attributes = attributes
-        .map((attr) => {
-          const parsed = parseAttribute(attr);
-
-          if (parsed.type !== "JSXSpreadAttribute") {
-            switch (parsed.name) {
-              case "type":
-                return j.jsxAttribute(
-                  j.jsxIdentifier("variant"),
-                  j.stringLiteral(getVariant(parsed.rawValue))
-                );
-              case "size":
-                return j.jsxAttribute(
-                  j.jsxIdentifier("size"),
-                  j.stringLiteral(getAkselSize(parsed.rawValue))
-                );
-              case "form":
-                return parsed.rawValue === "inline"
-                  ? j.jsxAttribute(j.jsxIdentifier("inline"))
-                  : undefined;
-              default:
-                return attr;
-            }
+      switch (imp.importData.importedName) {
+        case "AlertStripeFeil": {
+          replaceProp(jsx, "type", "variant", "error");
+          break;
+        }
+        case "AlertStripeSuksess": {
+          replaceProp(jsx, "type", "variant", "success");
+          break;
+        }
+        case "AlertStripeAdvarsel": {
+          replaceProp(jsx, "type", "variant", "warning");
+          break;
+        }
+        case "AlertStripeInfo": {
+          replaceProp(jsx, "type", "variant", "info");
+          break;
+        }
+        default: {
+          const type = getPropValue(jsx, "type");
+          if (isNakedLiteral(type)) {
+            replaceProp(
+              jsx,
+              "type",
+              "variant",
+              getVariant(getPropValue(jsx, "type"))
+            );
+          } else {
+            commentLines.push(
+              "TODO: 'type' er blitt gjort om til 'variant', men siden det er brukt en variabel for å definere 'type' så kan ikke migreringscriptet automatisk konvertere."
+            );
+            setProp(jsx, "variant", "info");
           }
+          break;
+        }
+      }
 
-          switch (parsed.name) {
-            case "type": {
-              commentLines.push(
-                "TODO: 'type' er blitt gjort om til 'variant', men siden det er brukt en variabel for å definere 'type' så kan ikke migreringscriptet automatisk konvertere."
-              );
-              return attr;
-            }
-            case "size": {
-              commentLines.push(
-                "TODO: 'size' er blitt gjort om til 'size=\"small\"|\"medium\"', men siden det er brukt en variabel for å definere 'size' så kan ikke migreringscriptet automatisk konvertere."
-              );
-              return attr;
-            }
-            case "form": {
-              commentLines.push(
-                "TODO: 'form' er blitt gjort om til 'inline=boolean', men siden det er brukt en variabel for å definere 'form' så kan ikke migreringscriptet automatisk konvertere."
-              );
-              return attr;
-            }
-            default:
-              return attr;
-          }
-        })
-        .filter(notUndefined);
+      if (hasProp(jsx, "size")) {
+        const sizeValue = getPropValue(jsx, "size");
+        if (isNakedLiteral(sizeValue)) {
+          setProp(jsx, "size", getAkselSize(sizeValue));
+        } else {
+          commentLines.push(
+            "TODO: 'size' er blitt gjort om til 'size=\"small\"|\"medium\"', men siden det er brukt en variabel for å definere 'size' så kan ikke migreringscriptet automatisk konvertere."
+          );
+        }
+      }
 
-      jsx.node.openingElement.attributes = attributes;
+      if (hasProp(jsx, "form")) {
+        const form = getPropValue(jsx, "form");
+        if (!isNakedLiteral(form)) {
+          commentLines.push(
+            "TODO: 'form' er blitt gjort om til 'inline=boolean', men siden det er brukt en variabel for å definere 'form' så kan ikke migreringscriptet automatisk konvertere."
+          );
+        }
+        if (form === "inline") {
+          replaceProp(jsx, "form", "inline", null);
+        }
+      }
 
       if (commentLines.length > 0) {
         jsx.insertBefore(...createComments(commentLines));
